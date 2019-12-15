@@ -1,76 +1,99 @@
 #!/usr/bin/env python3
 
-from z3 import *
+from sys import exit
+from math import sqrt
+from z3 import Solver, Bool, Not, Or 
 
-N = 9
-S = 3
+class SodukuSolver:
 
-grid = [\
-	[-1, 3, 1, -1, -1, -1, -1, 4, 6],\
-	[-1, -1, 4, 6, -1, -1, -1, 9, 5],\
-	[-1, -1, -1, -1, -1, 8, -1, -1, 7],\
-	[-1, -1, -1, 1, -1, -1, -1, -1, 4],\
-	[-1, -1, -1, 2, -1, 9, -1, -1 ,-1],\
-	[9, -1, -1, -1, -1, 3, -1, -1, -1],\
-	[4, -1, -1, 5, -1, -1, -1, -1, -1],\
-	[3, 8, -1, -1, -1, 1, 4, -1, -1],\
-	[2, 6, -1, -1, -1, -1, 7, 5, -1]\
-      ]
+	def __init__(self, filename):
+		self.grid = []
+		self.n = 0
+		self.s = 0
+		self.solver = Solver()
+		self.parseFile(filename)
+		self.checkGrid()
 
-s = Solver()
+	def parseFile(self, filename):
+		try:
+			with open(filename, 'r') as file:
+				for l in file.readlines():
+					self.grid.append(l.replace('\n', '').split('|'))
+			file.close()
 
-literals = [\
-		   [\
-		   [Bool("{}:{}:{}".format(i, j, value)) for value in range(N)]\
-		   for j in range(N)]\
-           for i in range(N)]
+		except FileNotFoundError as e:
+			exit(e)
 
-for i in range(N):
-	for j in range(N):
-		s.add(Or(literals[i][j]))
+	def checkGrid(self):
+		self.n = len(self.grid)
+		for line in self.grid:
+			if len(line) != self.n:
+				exit("Grid not valid!")
+		self.s = int(sqrt(self.n))
 
-for value in range(N):
-	for i in range(N):
-		for j in range(N):
-			for j_ in range(N):
-				if j != j_:
-					s.add(Or(Not(literals[i][j][value]), Not(literals[i][j_][value])))
+	def solveGrid(self):
+		literals = [\
+			[\
+			[Bool("{}:{}:{}".format(i, j, value)) for value in range(self.n)]\
+			for j in range(self.n)]\
+			for i in range(self.n)]
 
-	for j in range(N):
-		for i in range(N):
-			for i_ in range(N):
-				if i != i_:
-					s.add(Or(Not(literals[i][j][value]), Not(literals[i_][j][value])))
+		for i in range(self.n):
+			for j in range(self.n):
+				self.solver.add(Or(literals[i][j]))
 
-	for square_i in range(S):
-		for square_j in range(S):
-			for i in range(S):
-				for i_ in range(S):
-					for j in range(S):
-						for j_ in range(S):
-							if i != i_ and j != j_:
-								s.add(Or(Not(literals[square_i * S + i][square_j * S + j][value]), Not(literals[square_i * S + i_][square_j * S + j_][value])))
+		for value in range(self.n):
+			for i in range(self.n):
+				for j in range(self.n):
+					for j_ in range(self.n):
+						if j != j_:
+							self.solver.add(Or(Not(literals[i][j][value]), Not(literals[i][j_][value])))
 
-for i in range(N):
-	for j in range(N):
-		if grid[i][j] != -1:
-			s.add(literals[i][j][grid[i][j] - 1])
+			for j in range(self.n):
+				for i in range(self.n):
+					for i_ in range(self.n):
+						if i != i_:
+							self.solver.add(Or(Not(literals[i][j][value]), Not(literals[i_][j][value])))
 
-if (not s.check()):
-	print(s.check())
-	exit(0)
+			for square_i in range(self.s):
+				for square_j in range(self.s):
+					for i in range(self.s):
+						for i_ in range(self.s):
+							for j in range(self.s):
+								for j_ in range(self.s):
+									if i != i_ and j != j_:
+										self.solver.add(Or(Not(literals[square_i * self.s + i][square_j * self.s + j][value]), Not(literals[square_i * self.s + i_][square_j * self.s + j_][value])))
 
-m = s.model()
+		for i in range(self.n):
+			for j in range(self.n):
+				if self.grid[i][j] != '.':
+					self.solver.add(literals[i][j][int(self.grid[i][j]) - 1])
 
-for i in range(N):
-	for j in range(N):
-		if grid[i][j] == -1:
-			for value, literal in enumerate(literals[i][j]):
-				if m.evaluate(literal):
-					grid[i][j] = value + 1
+		if (not self.solver.check()):
+			exit(0)
 
-for i in range(N):
-	print("{} {} {} {} {} {} {} {} {}".format(grid[i][0], grid[i][1], grid[i][2], grid[i][3], grid[i][4], grid[i][5], grid[i][6], grid[i][7], grid[i][8]))
+		m = self.solver.model()
 
+		for i in range(self.n):
+			for j in range(self.n):
+				if self.grid[i][j] == ".":
+					for value, literal in enumerate(literals[i][j]):
+						if m.evaluate(literal):
+							self.grid[i][j] = value + 1
+							
+	def printGrid(self):
+		for line in self.grid:
+			print("|", end = '')
+			for element in line:
+				print(element, end = '|')
+			print()
+		print()
+
+
+if __name__=='__main__':
+	solv = SodukuSolver("test")
+	solv.printGrid()
+	solv.solveGrid()
+	solv.printGrid()
 
 
