@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from sys import exit
+import sys
 from math import sqrt
 from z3 import Solver, Bool, Not, Or 
 
@@ -91,9 +91,11 @@ class SodukuSolver:
 
 
 if __name__=='__main__':
-	solv = SodukuSolver("test")
-	solv.printGrid()
-	solv.solveGrid()
-	solv.printGrid()
+	if (len(sys.argv) == 1):
+		exit("File missing: ./sodoku <path_to_file>")
+	solver = SodukuSolver(sys.argv[1])
+	solver.printGrid()
+	solver.solveGrid()
+	solver.printGrid()
 
 
