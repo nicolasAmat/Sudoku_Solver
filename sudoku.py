@@ -12,11 +12,10 @@ Profesor: David MONNIAUX
 import sys
 import os
 import subprocess
-from z3 import Solver, Bool, Not, Or 
 
 class SudokuSolver:
 	"""
-	Sudoku Solver using Z3
+	Sudoku Solver using z3
 	"""
 	
 	def __init__(self, filename):
