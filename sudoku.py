@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
 """
-Project SAT/SMT Solving
+SAT/SMT Solving Project
 
 MoSIG HECS
 
-Student:  Nicolas AMat
-Profesor: David Monniaux
+Student:  Nicolas AMAT
+Profesor: David MONNIAUX
 """
 
 import sys
 import os
 import subprocess
-from math import sqrt
 from z3 import Solver, Bool, Not, Or 
 
 class SudokuSolver:
