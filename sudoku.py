@@ -110,21 +110,27 @@ class SudokuSolver:
 		self.smt.close()
 		
 		# Run Z3
-		smt_result = subprocess.run(['z3', self.smt_filename], capture_output=True, text=True).stdout.split('\n')
-		
-		os.remove(self.smt_filename)
+		proc = subprocess.Popen(['z3', '-smt2', self.smt_filename], stdout=subprocess.PIPE)
 
 		# Exit if grid unsolvable
-		if (smt_result[0] != 'sat'):
+		if (proc.stdout.readline().decode('utf-8').strip() != 'sat'):
 			exit("Grid unsolvable!")
 
+		# Read (model
+		proc.stdout.readline()
+
 		# Parse the model and fill the grid
-		for line in range(2, len(smt_result), 2):
-			evaluation = smt_result[line + 1].replace(' ', '').replace(')', '')
+		while(True):
+			literal = proc.stdout.readline().decode('utf-8').strip().split('_')
+			evaluation =  proc.stdout.readline().decode('utf-8').strip().replace(' ', '').replace(')', '')
+			if (len(literal) == 0 or evaluation == '') and proc.poll() is not None:
+				break
 			if (evaluation == "true"):
-				literal = smt_result[line].split('_')
 				self.grid[int(literal[1])][int(literal[2])] = int(literal[3]) + 1 
 
+		proc.poll()
+		os.remove(self.smt_filename)
+	
 	def printGrid(self):
 		"""
 		Print Sudoku grid
