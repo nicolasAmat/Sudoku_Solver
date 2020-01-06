@@ -19,7 +19,7 @@ class SudokuSolver:
 	"""
 	
 	def __init__(self, filename):
-		self.smt_filename = "{}.smt".format(filename)
+		self.smt_filename = "{}.smt2".format(filename)
 		self.smt = open(self.smt_filename, 'w')
 		
 		self.grid = [[0 for _ in range(9)] for _ in range(9)]
