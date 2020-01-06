@@ -106,6 +106,8 @@ class SudokuSolver:
 			for j in range(9):
 				if len(self.grid[i][j]) != 1 and len(self.grid[i][j]) < min_variables:
 					min_variables = len(self.grid[i][j])
+					if(not len(self.grid[i][j])):
+						exit("Grid unsolvable!")
 					choice = (i, j, self.grid[i][j][0])
 		return choice
 
