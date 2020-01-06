@@ -188,7 +188,7 @@ class SudokuSolver:
 				if (len(element) == 1):
 					print(element[0], end = '|')
 				else:
-					print(' ', end = '|')
+					print('0', end = '|')
 			print()
 		print()
 
