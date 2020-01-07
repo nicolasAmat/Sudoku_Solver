@@ -10,8 +10,6 @@ Profesor: David MONNIAUX
 """
 
 import sys
-import os
-import subprocess
 from collections import deque
 
 class SudokuSolver:
@@ -20,9 +18,6 @@ class SudokuSolver:
 	"""
 	
 	def __init__(self, filename):
-		self.smt_filename = "{}.smt".format(filename)
-		self.smt = open(self.smt_filename, 'w')
-		
 		self.grid = [[[] for _ in range(9)] for _ in range(9)]
 		self.n = 9
 		self.s = 3
