@@ -3,6 +3,8 @@
 """
 SAT/SMT Solving Project
 
+Sudoku Solver using SMTlib2
+
 MoSIG HECS
 
 Student:  Nicolas AMAT
@@ -19,13 +21,18 @@ class SudokuSolver:
 	"""
 	
 	def __init__(self, filename):
+		# Create SMTlib file
 		self.smt_filename = "{}.smt2".format(filename)
 		self.smt = open(self.smt_filename, 'w')
 		
-		self.grid = [[0 for _ in range(9)] for _ in range(9)]
+		# Grid size
 		self.n = 9
 		self.s = 3
 
+		# Grid initialization
+		self.grid = [[0 for j in range(self.n)] for i in range(self.n)]
+
+		# Parse input file
 		self.parseFile(filename)
 
 	def parseFile(self, filename):
@@ -45,11 +52,10 @@ class SudokuSolver:
 	def solveGrid(self):
 		"""
 		Solve Sudoku grid
-		- Write SMTlib file
+		- Write constraints in SMTlib2 file
 		- Solve using Z3
 		- Fill Sudoku grid
 		"""
-
 		# Create names of literals
 		literals = [\
 			[\
@@ -58,21 +64,21 @@ class SudokuSolver:
 			for i in range(self.n)]
 
 		# Declare literals
-		for line in literals:
-			for case in line:
-				for value in case:
-					self.smt.write("(declare-const {} Bool)\n".format(value))
+		for i in range(self.n):
+			for j in range(self.n):
+				for value in range(self.n):
+					self.smt.write("(declare-const {} Bool)\n".format(literals[i][j][value]))
 		
 		# Add constaints on cases
-		for line in literals:
-			for case in line:
+		for i in range(self.n):
+			for j in range(self.n):
 				values = ""
-				for value in case:
-					values += value + " "
+				for value in range(self.n):
+					values += literals[i][j][value] + " "
 				self.smt.write("(assert (or {}))\n".format(values))
 
 		for value in range(self.n):
-			# Add constraints on lines
+			# Add constraints on rows
 			for i in range(self.n):
 				for j in range(self.n):
 					for j_ in range(self.n):
@@ -96,7 +102,7 @@ class SudokuSolver:
 									if i != i_ and j != j_:
 										self.smt.write("(assert (or (not {}) (not {})))\n".format(literals[square_i * self.s + i][square_j * self.s + j][value], literals[square_i * self.s + i_][square_j * self.s + j_][value]))
 
-		# Add constraints on predifined values
+		# Add constraints on known values from the input grid
 		for i in range(self.n):
 			for j in range(self.n):
 				if self.grid[i][j] != 0:
@@ -112,24 +118,30 @@ class SudokuSolver:
 		# Run Z3
 		proc = subprocess.Popen(['z3', '-smt2', self.smt_filename], stdout=subprocess.PIPE)
 
-		# Exit if grid unsolvable
+		# Check if grid is solvable
 		if (proc.stdout.readline().decode('utf-8').strip() != 'sat'):
-			exit("Grid unsolvable!")
+			solved = False
+			print("Grid unsolvable!")
 
-		# Read (model
-		proc.stdout.readline()
+		else:
+			solved = True
 
-		# Parse the model and fill the grid
-		while(True):
-			literal = proc.stdout.readline().decode('utf-8').strip().split('_')
-			evaluation =  proc.stdout.readline().decode('utf-8').strip().replace(' ', '').replace(')', '')
-			if (len(literal) == 0 or evaluation == '') and proc.poll() is not None:
-				break
-			if (evaluation == "true"):
-				self.grid[int(literal[1])][int(literal[2])] = int(literal[3]) + 1 
+			# Read the model
+			proc.stdout.readline()
+
+			# Parse the model and fill the grid
+			while(True):
+				literal = proc.stdout.readline().decode('utf-8').strip().split('_')
+				evaluation =  proc.stdout.readline().decode('utf-8').strip().replace(' ', '').replace(')', '')
+				if (len(literal) == 0 or evaluation == '') and proc.poll() is not None:
+					break
+				if (evaluation == "true"):
+					self.grid[int(literal[1])][int(literal[2])] = int(literal[3]) + 1 
 
 		proc.poll()
 		os.remove(self.smt_filename)
+
+		return solved
 	
 	def printGrid(self):
 		"""
@@ -150,6 +162,8 @@ if __name__=='__main__':
 	
 	solver = SudokuSolver(sys.argv[1])
 	
+	print("Initial grid:\n")
 	solver.printGrid()
-	solver.solveGrid()
-	solver.printGrid()
+	if (solver.solveGrid()):
+		print("Solved grid:\n")
+		solver.printGrid()
