@@ -118,7 +118,7 @@ class SudokuSolver:
 		# Run Z3
 		proc = subprocess.Popen(['z3', '-smt2', self.smt_filename], stdout=subprocess.PIPE)
 
-		# Check if grid is solvable
+		# Check if the grid is solvable
 		if (proc.stdout.readline().decode('utf-8').strip() != 'sat'):
 			solved = False
 			print("Grid unsolvable!")
