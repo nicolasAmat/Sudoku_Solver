@@ -8,7 +8,7 @@ MoSIG HECS
 Sudoku Solver using a custom DPLL solver
 
 Student:  Nicolas AMAT
-Profesor: David MONNIAUX
+Professor: David MONNIAUX
 """
 
 import sys
@@ -22,6 +22,7 @@ class SudokuSolver:
 	def __init__(self, filename):
 		# Grid initialization
 		self.grid = [[[] for _ in range(9)] for _ in range(9)]
+		self.initial_values = []
 		
 		# Grid size 
 		self.n = 9
@@ -38,7 +39,9 @@ class SudokuSolver:
 			with open(filename, 'r') as file:
 				for l in file.readlines():
 					value_indexed = l.replace('(', '').replace(')', '').replace('\n', '').split(',')
-					self.grid[int(value_indexed[0]) - 1][int(value_indexed[1]) - 1].append(int(value_indexed[2]))
+					i, j, val = int(value_indexed[0]) - 1, int(value_indexed[1]) - 1, int(value_indexed[2]) 
+					self.initial_values.append((i, j, val))
+					self.grid[i][j].append(val)
 			file.close()
 
 		except FileNotFoundError as e:
@@ -53,14 +56,14 @@ class SudokuSolver:
 		else:
 			backtrack[(i,j)] = [value]
 
-	def propagate(self, i, j, value, backtrack):
+	def propagate(self, i, j, value, backtrack=None):
 		"""
 		Propagate a value at case (i, j) on the grid:
 		- Remove other possible choices on this case
 		- Propagate the value on the row
 		- Propagate the value on the column
 		- Propagate the value on the square
-		- Add the supressed values in a dictionary
+		- Add the supressed values in a dictionary (for backtracking)
 		- Contradiction: if a case has no possible values return False
 		- Recursive propagation: if a case has only one possible value, call this method on the case
 		"""
@@ -76,8 +79,10 @@ class SudokuSolver:
 			# Line propagation
 			if offset != j:
 				if value in self.grid[i][offset]:
+					# Remove the value and add it to the dictionary
 					self.grid[i][offset].remove(value)
-					self.addToBacktrack(i, offset, value ,backtrack)
+					if backtrack:
+						self.addToBacktrack(i, offset, value ,backtrack)
 					# Contradiction
 					if len(self.grid[i][offset]) == 0:
 						return False
@@ -89,8 +94,10 @@ class SudokuSolver:
 			# Column propagation
 			if offset != i:
 				if value in self.grid[offset][j]:
+					# Remove the value and add it to the dictionary
 					self.grid[offset][j].remove(value)
-					self.addToBacktrack(offset, j, value, backtrack)
+					if backtrack:
+						self.addToBacktrack(offset, j, value, backtrack)
 					# Contradiction
 					if len(self.grid[offset][j]) == 0:
 						return False
@@ -106,8 +113,10 @@ class SudokuSolver:
 			for offset_j in range(square_j * 3, square_j * 3 + 3):
 				if offset_i != i and offset_j != j:
 					if value in self.grid[offset_i][offset_j]:
+						# Remove the value and add it to the dictionary
 						self.grid[offset_i][offset_j].remove(value)
-						self.addToBacktrack(offset_i, offset_j, value, backtrack)
+						if backtrack:
+							self.addToBacktrack(offset_i, offset_j, value, backtrack)
 						# Contradiction
 						if len(self.grid[offset_i][offset_j]) == 0:
 							return False
@@ -127,11 +136,18 @@ class SudokuSolver:
 
 		for i in range(9):
 			for j in range(9):
+				# If the case does not contain any value, the grid is unsolvable
+				if not len(self.grid[i][j]):
+					exit("Grid unsolvable!")
+				
+				# Check if the case is a good candidate
 				if len(self.grid[i][j]) != 1 and len(self.grid[i][j]) < min_variables:
 					min_variables = len(self.grid[i][j])
-					if not len(self.grid[i][j]):
-						exit("Grid unsolvable!")
 					choice = (i, j, self.grid[i][j][0])
+					# If the case contains only two values, stop here (impossible to find a better case)
+					if (min_variables == 2):
+						return choice
+
 		return choice
 
 	def findChoice(self, i, j, choices):
@@ -142,6 +158,7 @@ class SudokuSolver:
 			if element not in choices:
 				choice = (i, j, element)
 				return choice
+
 		return (-1, -1, 0)
 
 	def restore(self, backtrack):
@@ -159,55 +176,73 @@ class SudokuSolver:
 		- Solve using Z3
 		- Fill Sudoku grid
 		"""
-		#Initialise
+		# Grid initialization
 		for i in range(9):
 			for j in range(9):
 				if len(self.grid[i][j]) == 0:
 					self.grid[i][j] = [val for val in range(1, 10)]
 
-		initial_backtrack = dict()
+		# Propagate initial values
+		for case in self.initial_values:
+			self.propagate(case[0], case[1], case[2])
 
-		for i in range(9):
-			for j in range(9):
-				if len(self.grid[i][j]) == 1:
-					self.propagate(i, j, self.grid[i][j][0], initial_backtrack)
-
-		queue_backtracks = deque()
+		# Data initialization for backtracking
+		# Queue of past choices
 		queue_choices = deque()
+		# Queue of suppressed values
+		queue_backtracks = deque()
+		# Dictionary of the choices already made for each case
 		choices_per_cells = dict()
 
+		# Do a first choice
 		choice = self.choiceHeuristic() 
 		
+		# While grid is not solved
 		while(choice[2] != 0):
+
+			# Initialization of dictionary containing the future suppressed variables for the current choice
 			backtrack = dict()
+
+			# Choice propagation
 			i, j, value = choice[0], choice[1], choice[2]
 			result = self.propagate(i, j, value, backtrack)
 			
+			# Update backtracking data
 			queue_backtracks.append(backtrack)
 			queue_choices.append((i, j, value))
-
 			if (i, j) not in choices_per_cells:
 				choices_per_cells[(i, j)] = [value]
 			else:
 				choices_per_cells[(i, j)].append(value)
 			
+			# Check if the past choice led to a contradiction
 			if (result):
+				# No contraction: make a new choice
 				choice = self.choiceHeuristic()
 			else:
+				# Contradiction: backtrack
 				find_one = False
+				# While an other choice is not found continue backtracking
 				while (queue_choices and not find_one):
+					# Backtrack the last choice
+					# Get the previous choice
 					old_choice = queue_choices.pop()
+					# Restore the previous suppressed values
 					old_propagation = queue_backtracks.pop()
 					self.restore(old_propagation)
+					# Make a new choice on the case
 					choice = self.findChoice(old_choice[0], old_choice[1], choices_per_cells[(old_choice[0], old_choice[1])])
+					# Check if a new choice on this case was possible
 					if choice[2] == 0:
+						# Choice was not possible, delete the choices already made on this case and continue backtrackring
 						del choices_per_cells[(old_choice[0],old_choice[1])]
 					else:
+						# New choice found, stop backtracking
 						find_one = True
 
+				# All possible exploration done, grid is unsolvable
 				if not find_one:
-					choice = self.choiceHeuristic()
-
+					exit("Grid unsolvable!")
 	
 	def printGrid(self):
 		"""

@@ -5,7 +5,7 @@
 
 **Course**: SAT/SMT Solving  
 **Student**:  Nicolas AMAT  
-**Profesor**: David MONNIAUX
+**Professor**: David MONNIAUX
 
 ## Usage
 

@@ -8,7 +8,7 @@ Sudoku Solver using z3 API
 MoSIG HECS
 
 Student:  Nicolas AMAT
-Profesor: David MONNIAUX
+Professor: David MONNIAUX
 """
 
 import sys
