@@ -11,13 +11,13 @@
 
 * `./sudoku_z3_api.py <path_to_grid_file>`
 * `./sudoku_z3_smtlib2.py <path_to_grid_file>`
-* `./sudoku_z3_dpll.py <path_to_grid_file>`
+* `./sudoku_dpll.py <path_to_grid_file>`
 
 ## Characteristics of Solvers
 
 * `./sudoku_z3_api.py`: Solver using Z3 API (slow)
 * `./sudoku_z3_smtlib2.py`: Solver writting an SMTlib2 file and parsing the output of z3 (fast)
-* `./sudoku_z3_dpll.py`: Solver with an embedded DPLL solver written by myself (very fast and not using z3)
+* `./sudoku_dpll.py`: Solver with an embedded DPLL solver written by myself (very fast and not using z3)
 
 ## Grid Format
 
