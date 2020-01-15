@@ -55,7 +55,6 @@ class SodukuSolver:
 		- Solve using Z3 API
 		- Fill Sudoku grid
 		"""
-
 		# Declare literals
 		literals = [\
 			[\
@@ -143,5 +142,3 @@ if __name__=='__main__':
 	if (solver.solveGrid()):
 		print("Solved grid:\n")
 		solver.printGrid()
-
-
