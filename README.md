@@ -9,9 +9,9 @@
 
 ## Usage
 
-* `./sudoku_z3_api.py <grid_file>`
-* `./sudoku_z3_smtlib2.py <grid_file>`
-* `./sudoku_z3_dpll.py <grid_file>`
+* `./sudoku_z3_api.py <path_to_grid_file>`
+* `./sudoku_z3_smtlib2.py <path_to_grid_file>`
+* `./sudoku_z3_dpll.py <path_to_grid_file>`
 
 ## Characteristics of Solvers
 
@@ -26,7 +26,7 @@ Each line represents a value in the initial grid:
 
 ## Test Grids
 
-Three grid are available to test the different solvers:
+Three grid are available in the directory `tests/` to test the different solvers:
 * `test_sat`: solvable grid
 * `test_unsat`: unsolvable grid
 * `test_hardest`: very difficult grid made by Arto Inkala and taken from https://www.telegraph.co.uk/news/science/science-news/9359579/Worlds-hardest-sudoku-can-you-crack-it.html

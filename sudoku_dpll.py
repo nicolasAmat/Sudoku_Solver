@@ -5,6 +5,8 @@ SAT/SMT Solving Project
 
 MoSIG HECS
 
+Sudoku Solver using a custom DPLL solver
+
 Student:  Nicolas AMAT
 Profesor: David MONNIAUX
 """
@@ -18,10 +20,14 @@ class SudokuSolver:
 	"""
 	
 	def __init__(self, filename):
+		# Grid initialization
 		self.grid = [[[] for _ in range(9)] for _ in range(9)]
+		
+		# Grid size 
 		self.n = 9
 		self.s = 3
 
+		# Parse input grid
 		self.parseFile(filename)
 
 	def parseFile(self, filename):
@@ -39,13 +45,26 @@ class SudokuSolver:
 			exit(e)
 
 	def addToBacktrack(self, i, j, value, backtrack):
+		"""
+		Add a suppressed value at case (i, j) into the backtrack dictionary
+		"""
 		if (i, j) in backtrack:
 			backtrack[(i, j)].append(value)
 		else:
 			backtrack[(i,j)] = [value]
 
 	def propagate(self, i, j, value, backtrack):
-
+		"""
+		Propagate a value at case (i, j) on the grid:
+		- Remove other possible choices on this case
+		- Propagate the value on the row
+		- Propagate the value on the column
+		- Propagate the value on the square
+		- Add the supressed values in a dictionary
+		- Contradiction: if a case has no possible values return False
+		- Recursive propagation: if a case has only one possible value, call this method on the case
+		"""
+		# Remove other possible values of the case
 		if len(self.grid[i][j]) != 1:
 			for element in self.grid[i][j]:
 				if element != value:
@@ -59,8 +78,10 @@ class SudokuSolver:
 				if value in self.grid[i][offset]:
 					self.grid[i][offset].remove(value)
 					self.addToBacktrack(i, offset, value ,backtrack)
+					# Contradiction
 					if len(self.grid[i][offset]) == 0:
 						return False
+					# Recursive propagation
 					if len(self.grid[i][offset]) == 1:
 						if (not self.propagate(i, offset, self.grid[i][offset][0], backtrack)):
 							return False
@@ -70,8 +91,10 @@ class SudokuSolver:
 				if value in self.grid[offset][j]:
 					self.grid[offset][j].remove(value)
 					self.addToBacktrack(offset, j, value, backtrack)
+					# Contradiction
 					if len(self.grid[offset][j]) == 0:
 						return False
+					# Recursive propagation
 					if len(self.grid[offset][j]) == 1:
 						if (not self.propagate(offset, j, self.grid[offset][j][0], backtrack)):
 							return False
@@ -85,8 +108,10 @@ class SudokuSolver:
 					if value in self.grid[offset_i][offset_j]:
 						self.grid[offset_i][offset_j].remove(value)
 						self.addToBacktrack(offset_i, offset_j, value, backtrack)
+						# Contradiction
 						if len(self.grid[offset_i][offset_j]) == 0:
 							return False
+						# Recursive propagation
 						if len(self.grid[offset_i][offset_j]) == 1:
 							if (not self.propagate(offset_i, offset_j, self.grid[offset_i][offset_j][0], backtrack)):
 								return False
@@ -94,6 +119,9 @@ class SudokuSolver:
 		return True
 
 	def choiceHeuristic(self):
+		"""
+		Find a case with a minimum of possible choices and select a value in this case
+		"""
 		min_variables = 10
 		choice = (-1, -1, 0)
 
@@ -101,12 +129,15 @@ class SudokuSolver:
 			for j in range(9):
 				if len(self.grid[i][j]) != 1 and len(self.grid[i][j]) < min_variables:
 					min_variables = len(self.grid[i][j])
-					if(not len(self.grid[i][j])):
+					if not len(self.grid[i][j]):
 						exit("Grid unsolvable!")
 					choice = (i, j, self.grid[i][j][0])
 		return choice
 
 	def findChoice(self, i, j, choices):
+		"""
+		Find a choice not already done for a giving cell
+		"""
 		for element in self.grid[i][j]:
 			if element not in choices:
 				choice = (i, j, element)
@@ -114,6 +145,9 @@ class SudokuSolver:
 		return (-1, -1, 0)
 
 	def restore(self, backtrack):
+		"""
+		Restore a set of decisions
+		"""
 		for index, values in backtrack.items():
 			for element in values:
 				self.grid[index[0]][index[1]].append(element)
@@ -197,6 +231,8 @@ if __name__=='__main__':
 	
 	solver = SudokuSolver(sys.argv[1])
 	
+	print("Initial grid:\n")
 	solver.printGrid()
 	solver.solveGrid()
+	print("Solved grid:\n")
 	solver.printGrid()
