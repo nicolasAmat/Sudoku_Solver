@@ -1,4 +1,4 @@
-# Soduku_Solver
+# Sudoku Solver
 
 
 **MoSIG HECS**
