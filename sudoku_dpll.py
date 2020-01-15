@@ -47,23 +47,23 @@ class SudokuSolver:
 		except FileNotFoundError as e:
 			exit(e)
 
-	def addToBacktrack(self, i, j, value, backtrack):
+	def addToRemoved(self, i, j, value, removed_values):
 		"""
-		Add a suppressed value at case (i, j) into the backtrack dictionary
+		Add a removed value at case (i, j) into the removed_values dictionary
 		"""
-		if (i, j) in backtrack:
-			backtrack[(i, j)].append(value)
+		if (i, j) in removed_values:
+			removed_values[(i, j)].append(value)
 		else:
-			backtrack[(i,j)] = [value]
+			removed_values[(i,j)] = [value]
 
-	def propagate(self, i, j, value, backtrack=None):
+	def propagate(self, i, j, value, removed_values=None):
 		"""
 		Propagate a value at case (i, j) on the grid:
 		- Remove other possible choices on this case
 		- Propagate the value on the row
 		- Propagate the value on the column
 		- Propagate the value on the square
-		- Add the supressed values in a dictionary (for backtracking)
+		- Add the removed values in a dictionary (for backtracking)
 		- Contradiction: if a case has no possible values return False
 		- Recursive propagation: if a case has only one possible value, call this method on the case
 		"""
@@ -72,7 +72,7 @@ class SudokuSolver:
 			for element in self.grid[i][j]:
 				if element != value:
 					self.grid[i][j].remove(element)
-					self.addToBacktrack(i, j, element, backtrack)
+					self.addToRemoved(i, j, element, removed_values)
 
 		# Line and column propagation
 		for offset in range(9):
@@ -81,14 +81,14 @@ class SudokuSolver:
 				if value in self.grid[i][offset]:
 					# Remove the value and add it to the dictionary
 					self.grid[i][offset].remove(value)
-					if backtrack:
-						self.addToBacktrack(i, offset, value ,backtrack)
+					if removed_values:
+						self.addToRemoved(i, offset, value, removed_values)
 					# Contradiction
 					if len(self.grid[i][offset]) == 0:
 						return False
 					# Recursive propagation
 					if len(self.grid[i][offset]) == 1:
-						if (not self.propagate(i, offset, self.grid[i][offset][0], backtrack)):
+						if not self.propagate(i, offset, self.grid[i][offset][0], removed_values):
 							return False
 
 			# Column propagation
@@ -96,14 +96,14 @@ class SudokuSolver:
 				if value in self.grid[offset][j]:
 					# Remove the value and add it to the dictionary
 					self.grid[offset][j].remove(value)
-					if backtrack:
-						self.addToBacktrack(offset, j, value, backtrack)
+					if removed_values:
+						self.addToRemoved(offset, j, value, removed_values)
 					# Contradiction
 					if len(self.grid[offset][j]) == 0:
 						return False
 					# Recursive propagation
 					if len(self.grid[offset][j]) == 1:
-						if (not self.propagate(offset, j, self.grid[offset][j][0], backtrack)):
+						if not self.propagate(offset, j, self.grid[offset][j][0], removed_values):
 							return False
 		
 		# Square propagation
@@ -115,14 +115,14 @@ class SudokuSolver:
 					if value in self.grid[offset_i][offset_j]:
 						# Remove the value and add it to the dictionary
 						self.grid[offset_i][offset_j].remove(value)
-						if backtrack:
-							self.addToBacktrack(offset_i, offset_j, value, backtrack)
+						if removed_values:
+							self.addToRemoved(offset_i, offset_j, value, removed_values)
 						# Contradiction
 						if len(self.grid[offset_i][offset_j]) == 0:
 							return False
 						# Recursive propagation
 						if len(self.grid[offset_i][offset_j]) == 1:
-							if (not self.propagate(offset_i, offset_j, self.grid[offset_i][offset_j][0], backtrack)):
+							if not self.propagate(offset_i, offset_j, self.grid[offset_i][offset_j][0], removed_values):
 								return False
 
 		return True
@@ -145,14 +145,14 @@ class SudokuSolver:
 					min_variables = len(self.grid[i][j])
 					choice = (i, j, self.grid[i][j][0])
 					# If the case contains only two values, stop here (impossible to find a better case)
-					if (min_variables == 2):
+					if min_variables == 2:
 						return choice
 
 		return choice
 
 	def findChoice(self, i, j, choices):
 		"""
-		Find a choice not already done for a giving cell
+		Find a choice not already done for a given case
 		"""
 		for element in self.grid[i][j]:
 			if element not in choices:
@@ -161,20 +161,18 @@ class SudokuSolver:
 
 		return (-1, -1, 0)
 
-	def restore(self, backtrack):
+	def restore(self, removed_values):
 		"""
 		Restore a set of decisions
 		"""
-		for index, values in backtrack.items():
-			for element in values:
-				self.grid[index[0]][index[1]].append(element)
+		for coord, values in removed_values.items():
+			for value in values:
+				self.grid[coord[0]][coord[1]].append(value)
 
 	def solveGrid(self):
 		"""
 		Solve Sudoku grid
-		- Write SMTlib file
-		- Solve using Z3
-		- Fill Sudoku grid
+		- Solve the grid using DPLL (Davis–Putnam–Logemann–Loveland)
 		"""
 		# Grid initialization
 		for i in range(9):
@@ -189,26 +187,26 @@ class SudokuSolver:
 		# Data initialization for backtracking
 		# Queue of past choices
 		queue_choices = deque()
-		# Queue of suppressed values
-		queue_backtracks = deque()
+		# Queue of deleted values
+		queue_removed_values = deque()
 		# Dictionary of the choices already made for each case
 		choices_per_cells = dict()
 
-		# Do a first choice
+		# Do a first choice (equals to (-1, -1, 0) if the grid is already solved)
 		choice = self.choiceHeuristic() 
 		
 		# While grid is not solved
 		while(choice[2] != 0):
 
-			# Initialization of dictionary containing the future suppressed variables for the current choice
-			backtrack = dict()
+			# Initialization of a dictionary containing the future deleted values for the current choice
+			removed_values = dict()
 
 			# Choice propagation
 			i, j, value = choice[0], choice[1], choice[2]
-			result = self.propagate(i, j, value, backtrack)
+			result = self.propagate(i, j, value, removed_values)
 			
 			# Update backtracking data
-			queue_backtracks.append(backtrack)
+			queue_removed_values.append(removed_values)
 			queue_choices.append((i, j, value))
 			if (i, j) not in choices_per_cells:
 				choices_per_cells[(i, j)] = [value]
@@ -222,25 +220,24 @@ class SudokuSolver:
 			else:
 				# Contradiction: backtrack
 				find_one = False
-				# While an other choice is not found continue backtracking
+				# Until a new choice is found continue backtracking
 				while (queue_choices and not find_one):
 					# Backtrack the last choice
 					# Get the previous choice
-					old_choice = queue_choices.pop()
-					# Restore the previous suppressed values
-					old_propagation = queue_backtracks.pop()
-					self.restore(old_propagation)
-					# Make a new choice on the case
-					choice = self.findChoice(old_choice[0], old_choice[1], choices_per_cells[(old_choice[0], old_choice[1])])
-					# Check if a new choice on this case was possible
+					prec_choice = queue_choices.pop()
+					# Restore the previous deleted values
+					self.restore(queue_removed_values.pop())
+					# Make a new choice on this case
+					choice = self.findChoice(prec_choice[0], prec_choice[1], choices_per_cells[(prec_choice[0], prec_choice[1])])
+					# Check if a new choice on this case is possible
 					if choice[2] == 0:
-						# Choice was not possible, delete the choices already made on this case and continue backtrackring
-						del choices_per_cells[(old_choice[0],old_choice[1])]
+						# New choice is not possible, delete the choices already made on this case and continue backtracking
+						del choices_per_cells[(prec_choice[0], prec_choice[1])]
 					else:
 						# New choice found, stop backtracking
 						find_one = True
 
-				# All possible exploration done, grid is unsolvable
+				# All possible explorations done, grid is unsolvable
 				if not find_one:
 					exit("Grid unsolvable!")
 	
