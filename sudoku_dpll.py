@@ -26,7 +26,6 @@ class SudokuSolver:
 		
 		# Grid size 
 		self.n = 9
-		self.s = 3
 
 		# Parse input grid
 		self.parseFile(filename)
