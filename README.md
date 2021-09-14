@@ -1,11 +1,6 @@
 # Sudoku Solver
 
-
-**MoSIG HECS**
-
-**Course**: SAT/SMT Solving  
-**Student**:  Nicolas AMAT  
-**Professor**: David MONNIAUX
+A Sudoku solver with a custom DPLL decision procedure.
 
 ## Usage
 
